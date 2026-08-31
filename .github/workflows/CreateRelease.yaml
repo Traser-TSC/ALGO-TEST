@@ -319,8 +319,56 @@ jobs:
           skipUpdatingDependencies: ${{ github.event.inputs.skipUpdatingDependencies }}
           directCommit: ${{ github.event.inputs.directCommit }}
 
+  CloseAdoWorkItems:
+    needs: [ CreateRelease, UploadArtifacts ]
+    if: ${{ github.event.inputs.releaseType == 'Release' }}
+    runs-on: [ windows-latest ]
+    name: Close Azure DevOps work items
+    environment: ado-writeback
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read release notes
+        id: release
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          releaseId: ${{ needs.CreateRelease.outputs.releaseId }}
+        with:
+          script: |
+            const fs = require('fs')
+            const { data: release } = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: Number(process.env.releaseId)
+            })
+            fs.writeFileSync('release-body.md', release.body || '')
+            core.setOutput('tag', release.tag_name)
+            core.setOutput('url', release.html_url)
+
+      - name: Close work items
+        env:
+          ADO_ORG: ${{ vars.ADO_ORG || vars.ADO_ORGANIZATION || vars.AdoOrganization }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT || vars.AdoProject }}
+          ADO_PAT: ${{ secrets.ADO_PAT || secrets.ADO_TOKEN || secrets.AdoPat }}
+          GITHUB_TOKEN: ${{ github.token }}
+          VARS_JSON: ${{ toJson(vars) }}
+          SECRETS_JSON: ${{ toJson(secrets) }}
+          releaseTag: ${{ steps.release.outputs.tag }}
+          releaseUrl: ${{ steps.release.outputs.url }}
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"
+          .\.github\scripts\Close-AdoReleaseWorkItems.ps1 `
+            -Organization $env:ADO_ORG `
+            -Project $env:ADO_PROJECT `
+            -Pat $env:ADO_PAT `
+            -Repository '${{ github.repository }}' `
+            -ReleaseTag $env:releaseTag `
+            -ReleaseUrl $env:releaseUrl `
+            -ReleaseBodyFile 'release-body.md'
+
   PostProcess:
-    needs: [ CreateRelease, UploadArtifacts, CreateReleaseBranch, UpdateVersionNumber ]
+    needs: [ CreateRelease, UploadArtifacts, CreateReleaseBranch, UpdateVersionNumber, CloseAdoWorkItems ]
     if: always()
     runs-on: [ windows-latest ]
     steps:
