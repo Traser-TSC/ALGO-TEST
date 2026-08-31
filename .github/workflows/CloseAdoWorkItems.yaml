@@ -1,0 +1,80 @@
+name: ' Close Azure DevOps work items'
+run-name: "Close Azure DevOps work items - ${{ inputs.tag }}${{ inputs.dryRun == true && ' (dry run)' || '' }}"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.tag }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the release whose work items should be closed
+        required: true
+        default: ''
+      dryRun:
+        description: Dry run - only report what would happen, do not write to Azure DevOps
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: powershell
+
+jobs:
+  CloseAdoWorkItems:
+    runs-on: [ windows-latest ]
+    environment: ado-writeback
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read release notes
+        id: release
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          tag: ${{ inputs.tag }}
+        with:
+          script: |
+            const fs = require('fs')
+            let body = ''
+            let htmlUrl = ''
+            try {
+              const { data: release } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: process.env.tag
+              })
+              body = release.body || ''
+              htmlUrl = release.html_url
+            } catch (error) {
+              // No release for this tag yet - the commit history alone still yields the references.
+              core.warning(`No release found for tag ${process.env.tag}: ${error.message}`)
+            }
+            fs.writeFileSync('release-body.md', body)
+            core.setOutput('url', htmlUrl)
+
+      - name: Close work items
+        env:
+          ADO_ORG: ${{ vars.ADO_ORG || vars.ADO_ORGANIZATION || vars.AdoOrganization }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT || vars.AdoProject }}
+          ADO_PAT: ${{ secrets.ADO_PAT || secrets.ADO_TOKEN || secrets.AdoPat }}
+          GITHUB_TOKEN: ${{ github.token }}
+          VARS_JSON: ${{ toJson(vars) }}
+          SECRETS_JSON: ${{ toJson(secrets) }}
+          releaseTag: ${{ inputs.tag }}
+          releaseUrl: ${{ steps.release.outputs.url }}
+          dryRun: ${{ inputs.dryRun }}
+        run: |
+          $errorActionPreference = "Stop"; $ProgressPreference = "SilentlyContinue"
+          .\.github\scripts\Close-AdoReleaseWorkItems.ps1 `
+            -Organization $env:ADO_ORG `
+            -Project $env:ADO_PROJECT `
+            -Pat $env:ADO_PAT `
+            -Repository '${{ github.repository }}' `
+            -ReleaseTag $env:releaseTag `
+            -ReleaseUrl $env:releaseUrl `
+            -ReleaseBodyFile 'release-body.md' `
+            -DryRun:([System.Convert]::ToBoolean($env:dryRun))
