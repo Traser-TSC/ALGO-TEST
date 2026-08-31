@@ -40,6 +40,10 @@ $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $adoApiVersion = '7.1'
+# GitHub's maximum page size. The page cap bounds the number of API calls on a huge range;
+# hitting it emits a warning rather than silently processing an incomplete set.
+$githubPageSize = 100
+$githubMaxPages = 100
 
 function Get-MissingInputHint {
     # Names of the configured variables/secrets, so a misnamed variable is obvious from the log.
@@ -106,6 +110,56 @@ function Get-PreviousReleaseTag {
     return ''
 }
 
+function Get-CommitMessagesInRange {
+    param([string] $BaseHead)
+    # GitHub caps per_page at 100 for the compare endpoint, so a release spanning more commits
+    # has to be paged through - otherwise references in later commits are silently dropped.
+    $messages = @()
+    $total = -1
+    $page = 1
+    do {
+        $result = Invoke-GitHubApi -Path "repos/$Repository/compare/$BaseHead`?per_page=$githubPageSize&page=$page"
+        if ($total -lt 0) {
+            $total = [int]$result.total_commits
+            Write-Host "Comparison contains $total commit(s)"
+        }
+        $batch = @($result.commits)
+        $messages += @($batch | ForEach-Object { $_.commit.message })
+        $page++
+        # A short page is the primary signal that the range is exhausted; total_commits only
+        # saves the extra call on an exact multiple. Relying on total alone would stop after
+        # one page - silently and without a warning - if the field were ever missing.
+    } while ($batch.Count -eq $githubPageSize -and ($total -le 0 -or $messages.Count -lt $total) -and $page -le $githubMaxPages)
+
+    if ($total -gt 0 -and $messages.Count -lt $total) {
+        Write-Host "::warning::Read only $($messages.Count) of $total commit(s) in $BaseHead - work item references in the remaining commits are not processed."
+    }
+    elseif ($page -gt $githubMaxPages -and $batch.Count -eq $githubPageSize) {
+        # Only the page cap counts as truncation here. A full last page is normal when the
+        # range happens to end exactly on a page boundary.
+        Write-Host "::warning::Stopped after $($messages.Count) commit(s) in $BaseHead - work item references in the remaining commits are not processed."
+    }
+    Write-Host "Scanning $($messages.Count) commit message(s)"
+    return $messages
+}
+
+function Get-CommitMessagesForRef {
+    param([string] $Ref)
+    $messages = @()
+    $page = 1
+    do {
+        $batch = @(Invoke-GitHubApi -Path "repos/$Repository/commits?sha=$Ref&per_page=$githubPageSize&page=$page")
+        $messages += @($batch | ForEach-Object { $_.commit.message })
+        $page++
+    } while ($batch.Count -eq $githubPageSize -and $page -le $githubMaxPages)
+
+    if ($batch.Count -eq $githubPageSize) {
+        Write-Host "::warning::Stopped after $($messages.Count) commit(s) of $Ref - work item references in older commits are not processed."
+    }
+    Write-Host "Scanning $($messages.Count) commit message(s)"
+    return $messages
+}
+
 function Get-ReferenceText {
     $texts = @()
 
@@ -123,9 +177,7 @@ function Get-ReferenceText {
     if ($previousTag) {
         Write-Host "Comparing $previousTag...$ReleaseTag"
         try {
-            $compare = Invoke-GitHubApi -Path "repos/$Repository/compare/$previousTag...$ReleaseTag`?per_page=250"
-            Write-Host "Scanning $($compare.commits.Count) commit message(s)"
-            $texts += @($compare.commits | ForEach-Object { $_.commit.message })
+            $texts += Get-CommitMessagesInRange -BaseHead "$previousTag...$ReleaseTag"
         }
         catch {
             Write-Host "::warning::Could not compare $previousTag...$ReleaseTag : $($_.Exception.Message)"
@@ -135,9 +187,7 @@ function Get-ReferenceText {
         # First release of the repository: every commit reachable from the tag belongs to it.
         Write-Host "No previous release found - scanning the history of $ReleaseTag"
         try {
-            $commits = Invoke-GitHubApi -Path "repos/$Repository/commits?sha=$ReleaseTag&per_page=100"
-            Write-Host "Scanning $($commits.Count) commit message(s)"
-            $texts += @($commits | ForEach-Object { $_.commit.message })
+            $texts += Get-CommitMessagesForRef -Ref $ReleaseTag
         }
         catch {
             Write-Host "::warning::Could not read the history of $ReleaseTag : $($_.Exception.Message)"
