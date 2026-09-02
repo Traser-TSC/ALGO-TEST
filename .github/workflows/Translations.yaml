@@ -34,8 +34,11 @@ jobs:
   Translate:
     runs-on: [ windows-latest ]
     env:
-      # true on push (safe default while iterating); a workflow_dispatch run can set it to false.
-      dryRun: ${{ github.event_name == 'workflow_dispatch' && inputs.dryRun || 'true' }}
+      # TEMPORARY: forced to false to test the "nothing new to translate"
+      # path - no AL/config changes here, so this should show 0 nodes
+      # translated, no commit, but Trigger CICD must still fire. Revert
+      # to the conditional right after.
+      dryRun: 'false'
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
