@@ -6,6 +6,10 @@ name: ' Translations (WIP - Diagnose)'
 
 on:
   workflow_dispatch:
+  push:
+    # WIP: nur der Testbranch, damit workflow_dispatch nicht erst auf dem
+    # Default-Branch registriert sein muss, um dispatchbar zu sein.
+    branches: [ 'dev/tsc/translations' ]
 
 defaults:
   run:
