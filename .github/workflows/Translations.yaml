@@ -22,7 +22,7 @@ defaults:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
   id-token: write
   packages: read
 
@@ -134,14 +134,26 @@ jobs:
           targetLanguages: ${{ steps.translationInputs.outputs.languages }}
           dryRun: ${{ github.event_name == 'workflow_dispatch' && inputs.dryRun || 'true' }}
 
-      # DIAGNOSE (temporär): Ergebnisdateien zum manuellen Nachsehen, solange
-      # der Commit-Schritt noch nicht existiert.
-      - name: 'DIAGNOSE: Übersetzte Dateien hochladen'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        env:
-          ACTIONS_RUNNER_DISABLE_NODE_MAGLEV: 1
-        if: success() || failure()
-        with:
-          name: 'DIAGNOSE-translated-xlf'
-          path: '**/Translations/*.xlf'
-          if-no-files-found: ignore
+      - name: Commit and push translated files
+        id: commitTranslations
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $translationsFolder = '${{ steps.translationInputs.outputs.translationsFolder }}'
+          $pattern = Join-Path $translationsFolder '*.xlf'
+
+          git add -- "$pattern"
+          $changedFiles = git diff --cached --name-only -- "$pattern"
+
+          if (-not $changedFiles) {
+            Write-Host "No translation changes to commit."
+            exit 0
+          }
+
+          Write-Host "Changed translation files:"
+          $changedFiles | ForEach-Object { Write-Host "  $_" }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Update translations [TRADOS]'
+          git push
