@@ -34,10 +34,9 @@ jobs:
   Translate:
     runs-on: [ windows-latest ]
     env:
-      # TEMPORARY: forced to false to test the "nothing new to translate"
-      # path - no AL/config changes here, so this should show 0 nodes
-      # translated, no commit, but Trigger CICD must still fire. Revert
-      # to the conditional right after.
+      # TEMPORARY: forced to false to test adding a new language (it-IT) to
+      # config.json - expect only it-IT to get fresh segments, de-DE/fr-FR
+      # untouched (0 nodes each). Revert to the conditional right after.
       dryRun: 'false'
     steps:
       - name: Checkout
