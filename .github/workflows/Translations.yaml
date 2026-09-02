@@ -132,7 +132,10 @@ jobs:
           globalXliffFile: ${{ steps.translationInputs.outputs.globalXliffFile }}
           translationsFolder: ${{ steps.translationInputs.outputs.translationsFolder }}
           targetLanguages: ${{ steps.translationInputs.outputs.languages }}
-          dryRun: ${{ github.event_name == 'workflow_dispatch' && inputs.dryRun || 'true' }}
+          # TEMPORARY: forced to false for one real-API test run, since the
+          # workflow_dispatch button needs this file on the default branch to
+          # render its input form. Revert to the conditional right after.
+          dryRun: 'false'
 
       # DIAGNOSE (temporär): Ergebnisdateien zum manuellen Nachsehen, solange
       # der Commit-Schritt noch nicht existiert.
