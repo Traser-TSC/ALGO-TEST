@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
+  <file datatype="xml" source-language="en-US" target-language="de-DE" original="trados-translation.xlf">
+    <header>
+      <tool tool-id="TRADOS-Translation-Lookup" tool-name="TRADOS Translation Lookup Processor" tool-version="1.0.0" tool-company="RWS"/>
+    </header>
+    <body>
+      <group id="body">
+        <trans-unit id="Table 3541268520 - Property 2879900210" translate="yes" xml:space="preserve">
+          <source>Translation Demo</source>
+          <target state="needs-review-translation" origin-type="nmt" origin-system="DeepL Translation Provider">Demo zur Übersetzung</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table TSC Translation Demo - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 3541268520 - Field 3543129988 - Property 1295455071" translate="yes" xml:space="preserve">
+          <source>Specifies whether the demo entry is blocked for further processing.</source>
+          <target state="needs-review-translation" origin-type="nmt" origin-system="DeepL Translation Provider">Gibt an, ob der Demo-Eintrag für die weitere Bearbeitung gesperrt ist.</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table TSC Translation Demo - Field Blocked - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Table 3541268520 - Field 3543129988 - Property 2879900210" translate="yes" xml:space="preserve">
+          <source>Blocked</source>
+          <target state="needs-review-translation" match-percent="100" origin-type="tm" origin-system="UI_ALL_DevOps">Gesperrt</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table TSC Translation Demo - Field Blocked - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 3541268520 - Field 3004954119 - Property 1295455071" translate="yes" xml:space="preserve">
+          <source>Specifies the code that identifies the demo entry.</source>
+          <target state="needs-review-translation" match-percent="80" origin-type="tm" origin-system="UI_ALL_DevOps">Gibt den Code des Filterdatensatzes an.</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table TSC Translation Demo - Field Code - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Table 3541268520 - Field 3004954119 - Property 2879900210" translate="yes" xml:space="preserve">
+          <source>Code</source>
+          <target state="needs-review-translation" match-percent="100" origin-type="tm" origin-system="UI_ALL_DevOps">Code</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table TSC Translation Demo - Field Code - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Table 3541268520 - Field 3461834954 - Property 1295455071" translate="yes" xml:space="preserve">
+          <source>Specifies a description of the demo entry.</source>
+          <target state="needs-review-translation" match-percent="91" origin-type="tm" origin-system="UI_ALL_DevOps">Gibt eine Beschreibung des Lagerplatzpostens an.</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table TSC Translation Demo - Field Description - Property ToolTip</note>
+        </trans-unit>
+        <trans-unit id="Table 3541268520 - Field 3461834954 - Property 2879900210" translate="yes" xml:space="preserve">
+          <source>Description</source>
+          <target state="needs-review-translation" match-percent="100" origin-type="tm" origin-system="UI_ALL_DevOps">Beschreibung</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Table TSC Translation Demo - Field Description - Property Caption</note>
+        </trans-unit>
+        <trans-unit id="Codeunit 2438224664 - Method 291827694 - NamedType 3621259247" translate="yes" xml:space="preserve">
+          <source>The demo entry %1 is blocked and cannot be processed.</source>
+          <target state="needs-review-translation" origin-type="nmt" origin-system="DeepL Translation Provider">Der Demo-Eintrag %1 ist gesperrt und kann nicht verarbeitet werden.</target>
+          <note from="Developer" annotates="general" priority="2">%1 = the code of the demo entry</note>
+          <note from="Xliff Generator" annotates="general" priority="3">Codeunit TSC Translation Demo Mgt. - Method ValidateEntry - NamedType BlockedErr</note>
+        </trans-unit>
+        <trans-unit id="Codeunit 2438224664 - Method 291827694 - NamedType 2529674289" translate="yes" xml:space="preserve">
+          <source>Enter a description before you process the demo entry.</source>
+          <target state="needs-review-translation" origin-type="nmt" origin-system="DeepL Translation Provider">Geben Sie eine Beschreibung ein, bevor Sie den Demo-Eintrag bearbeiten.</target>
+          <note from="Developer" annotates="general" priority="2"></note>
+          <note from="Xliff Generator" annotates="general" priority="3">Codeunit TSC Translation Demo Mgt. - Method ValidateEntry - NamedType DescriptionMissingErr</note>
+        </trans-unit>
+      </group>
+    </body>
+  </file>
+</xliff>
