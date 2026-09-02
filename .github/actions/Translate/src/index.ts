@@ -10,17 +10,21 @@ function basenameWithoutGXlf(globalXliffFile: string): string {
 
 async function run(): Promise<void> {
     try {
-        const clientId = core.getInput('clientId', { required: true });
-        const clientSecret = core.getInput('clientSecret', { required: true });
-        const tenantId = core.getInput('tenantId', { required: true });
-        const translationEngineId = core.getInput('translationEngineId', { required: true });
+        const dryRun = core.getBooleanInput('dryRun');
+
+        // Only require real TRADOS credentials outside dryRun - translateSegment()
+        // returns a mock result before any auth call is made when dryRun is set,
+        // so a plumbing-only test run shouldn't need secrets to exist yet.
+        const clientId = core.getInput('clientId', { required: !dryRun });
+        const clientSecret = core.getInput('clientSecret', { required: !dryRun });
+        const tenantId = core.getInput('tenantId', { required: !dryRun });
+        const translationEngineId = core.getInput('translationEngineId', { required: !dryRun });
         const regionCode = core.getInput('regionCode') || 'eu';
         const minimumMatchValue = parseInt(core.getInput('minimumMatchValue') || '70', 10);
 
         const globalXliffFile = core.getInput('globalXliffFile', { required: true });
         const translationsFolder = core.getInput('translationsFolder', { required: true });
         const targetLanguagesInput = core.getInput('targetLanguages', { required: true });
-        const dryRun = core.getBooleanInput('dryRun');
 
         const targetLanguages = targetLanguagesInput
             .split(',')

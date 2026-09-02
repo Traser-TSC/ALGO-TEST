@@ -40,5 +40,5 @@ outputs:
   translatedNodesCount:
     description: 'Total number of translation nodes updated across all target files'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
