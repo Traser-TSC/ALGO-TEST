@@ -2,5 +2,12 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v9.2/.Modules/settings.schema.json",
   "type": "AppSource App",
   "templateUrl": "https://github.com/microsoft/AL-Go-AppSource@main",
-  "enableAppSourceCop": false
+  "enableAppSourceCop": false,
+  "customALGoFiles": {
+    "filesToExclude": [
+      { "sourceFolder": ".github/workflows", "filter": "CreateRuntimePackages.yaml" },
+      { "sourceFolder": ".github/workflows", "filter": "PullRequestClosed.yaml" },
+      { "sourceFolder": ".github/workflows", "filter": "PullRequestContainerDeploy.yaml" }
+    ]
+  }
 }
