@@ -1,0 +1,44 @@
+name: 'Translate XLIFF with TRADOS'
+description: 'Translates a BC .g.xlf against per-language .xlf files using the TRADOS Translation Lookup API. Missing language files are created; existing ones are only extended with new/needs-translation nodes.'
+inputs:
+  clientId:
+    description: 'TRADOS Client ID'
+    required: true
+  clientSecret:
+    description: 'TRADOS Client Secret'
+    required: true
+  tenantId:
+    description: 'TRADOS Account ID (X-LC-Tenant header)'
+    required: true
+  translationEngineId:
+    description: 'TRADOS Translation Engine ID'
+    required: true
+  regionCode:
+    description: "TRADOS region code (e.g. 'eu', 'us')"
+    required: false
+    default: 'eu'
+  minimumMatchValue:
+    description: 'Minimum translation memory match percentage (0-100)'
+    required: false
+    default: '70'
+  globalXliffFile:
+    description: 'Path to the single source .g.xlf file'
+    required: true
+  translationsFolder:
+    description: 'Folder containing (or to receive) the per-language .xlf files'
+    required: true
+  targetLanguages:
+    description: "Comma-separated target language codes, e.g. 'de-DE,fr-FR'"
+    required: true
+  dryRun:
+    description: 'If true, skips real TRADOS API calls and reports what would happen'
+    required: false
+    default: 'false'
+outputs:
+  processedFiles:
+    description: 'Number of target files successfully processed'
+  translatedNodesCount:
+    description: 'Total number of translation nodes updated across all target files'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

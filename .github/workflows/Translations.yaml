@@ -1,11 +1,16 @@
-name: ' Translations (WIP - Diagnose)'
+name: ' Translations (WIP)'
 
-# WIP: Aktuell nur zum Testen des containerlosen Compile-Schritts.
-# Trados-Übersetzung, Sprachen-Seeding und der Commit-Schritt folgen erst,
-# wenn dieser Teil bestätigt ist.
+# WIP: Compile -> locate .g.xlf -> read config.json -> Trados translate.
+# The commit-back step is not wired up yet - this run only shows what
+# would be written, via the uploaded artifact and the job summary.
 
 on:
   workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'Dry run - skip real TRADOS API calls'
+        type: boolean
+        default: true
   push:
     # WIP: nur der Testbranch, damit workflow_dispatch nicht erst auf dem
     # Default-Branch registriert sein muss, um dispatchbar zu sein.
@@ -83,31 +88,60 @@ jobs:
           dependencyAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
           dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
 
-      # DIAGNOSE (temporär): Erzeugt der containerlose CompileApps-Pfad
-      # dieselbe Translations/*.g.xlf wie der container-basierte RunPipeline-Pfad?
-      - name: 'DIAGNOSE: Translations-Ordner auflisten'
-        if: success() || failure()
+      - name: Locate global XLIFF and read config.json
+        id: translationInputs
         shell: pwsh
         run: |
-          Write-Host "--- Translations-Ordner unter $env:GITHUB_WORKSPACE ---"
-          Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Directory -Filter 'Translations' -ErrorAction SilentlyContinue | ForEach-Object {
-            Write-Host "Ordner: $($_.FullName)"
-            Get-ChildItem -Path $_.FullName -File -Force | ForEach-Object { Write-Host "    $($_.Name)  ($($_.Length) Bytes)" }
+          $ErrorActionPreference = 'Stop'
+          $gxlf = @(Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Filter '*.g.xlf' -File)
+          if ($gxlf.Count -eq 0) {
+            throw "No .g.xlf file found under $env:GITHUB_WORKSPACE"
           }
-          Write-Host "--- Alle *.g.xlf im Workspace ---"
-          $found = @(Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Filter '*.g.xlf' -File -Force -ErrorAction SilentlyContinue)
-          if ($found.Count -eq 0) {
-            Write-Host "KEINE .g.xlf gefunden."
-          } else {
-            $found | ForEach-Object { Write-Host "$($_.FullName)  ($($_.Length) Bytes)" }
+          if ($gxlf.Count -gt 1) {
+            throw "Expected exactly one .g.xlf file, found $($gxlf.Count): $($gxlf.FullName -join ', ')"
+          }
+          $globalXliffFile = $gxlf[0].FullName
+          $translationsFolder = $gxlf[0].DirectoryName
+
+          $configPath = Join-Path $env:GITHUB_WORKSPACE 'config.json'
+          if (-not (Test-Path $configPath)) {
+            throw "config.json not found at repo root ($configPath)"
+          }
+          $config = Get-Content -Raw -Path $configPath | ConvertFrom-Json
+          $languages = ($config.languages -join ',')
+          if (-not $languages) {
+            throw "config.json contains no languages"
           }
 
-      - name: 'DIAGNOSE: .g.xlf als Artefakt hochladen'
+          Write-Host "Global XLIFF: $globalXliffFile"
+          Write-Host "Translations folder: $translationsFolder"
+          Write-Host "Target languages: $languages"
+
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "globalXliffFile=$globalXliffFile"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "translationsFolder=$translationsFolder"
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "languages=$languages"
+
+      - name: Translate
+        id: translate
+        uses: ./.github/actions/Translate
+        with:
+          clientId: ${{ secrets.TRADOS_CLIENT_ID }}
+          clientSecret: ${{ secrets.TRADOS_CLIENT_SECRET }}
+          tenantId: ${{ secrets.TRADOS_TENANT_ID }}
+          translationEngineId: ${{ secrets.TRADOS_TRANSLATION_ENGINE_ID }}
+          globalXliffFile: ${{ steps.translationInputs.outputs.globalXliffFile }}
+          translationsFolder: ${{ steps.translationInputs.outputs.translationsFolder }}
+          targetLanguages: ${{ steps.translationInputs.outputs.languages }}
+          dryRun: ${{ github.event_name == 'workflow_dispatch' && inputs.dryRun || 'true' }}
+
+      # DIAGNOSE (temporär): Ergebnisdateien zum manuellen Nachsehen, solange
+      # der Commit-Schritt noch nicht existiert.
+      - name: 'DIAGNOSE: Übersetzte Dateien hochladen'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         env:
           ACTIONS_RUNNER_DISABLE_NODE_MAGLEV: 1
         if: success() || failure()
         with:
-          name: 'DIAGNOSE-compileapps-gxlf'
+          name: 'DIAGNOSE-translated-xlf'
           path: '**/Translations/*.xlf'
           if-no-files-found: ignore
