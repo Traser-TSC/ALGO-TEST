@@ -1,8 +1,8 @@
 name: ' Translations (WIP)'
 
 # WIP: Compile -> locate .g.xlf -> read config.json -> Trados translate.
-# The commit-back step is not wired up yet - this run only shows what
-# would be written, via the uploaded artifact and the job summary.
+# Commits translated files back to this branch, but only when dryRun is
+# false - a push run stays side-effect-free by default.
 
 on:
   workflow_dispatch:
