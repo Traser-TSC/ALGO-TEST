@@ -1,0 +1,109 @@
+name: ' Translations (WIP - Diagnose)'
+
+# WIP: Aktuell nur zum Testen des containerlosen Compile-Schritts.
+# Trados-Übersetzung, Sprachen-Seeding und der Commit-Schritt folgen erst,
+# wenn dieser Teil bestätigt ist.
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: powershell
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+  packages: read
+
+env:
+  ALGoOrgSettings: ${{ vars.ALGoOrgSettings }}
+  ALGoRepoSettings: ${{ vars.ALGoRepoSettings }}
+
+jobs:
+  Translate:
+    runs-on: [ windows-latest ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: true
+
+      - name: Read settings
+        uses: microsoft/AL-Go-Actions/ReadSettings@v9.2
+        with:
+          shell: powershell
+          project: '.'
+          buildMode: 'Default'
+          get: artifact,generateDependencyArtifact
+
+      - name: Read secrets
+        id: ReadSecrets
+        uses: microsoft/AL-Go-Actions/ReadSecrets@v9.2
+        with:
+          shell: powershell
+          gitHubSecrets: ${{ toJson(secrets) }}
+          getSecrets: 'appDependencySecrets'
+
+      - name: Determine ArtifactUrl
+        id: determineArtifactUrl
+        uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@v9.2
+        with:
+          shell: powershell
+          project: '.'
+
+      - name: Download Project Dependencies
+        id: DownloadProjectDependencies
+        uses: microsoft/AL-Go-Actions/DownloadProjectDependencies@v9.2
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+        with:
+          shell: powershell
+          project: '.'
+          buildMode: 'Default'
+          projectDependenciesJson: '{}'
+          baselineWorkflowRunId: '0'
+
+      - name: Compile Apps (containerlos)
+        id: compile
+        uses: microsoft/AL-Go-Actions/CompileApps@v9.2
+        env:
+          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
+          BuildMode: 'Default'
+        with:
+          shell: powershell
+          artifact: ${{ env.artifact }}
+          project: '.'
+          buildMode: 'Default'
+          dependencyAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedApps }}
+          dependencyTestAppsJson: ${{ steps.DownloadProjectDependencies.outputs.DownloadedTestApps }}
+
+      # DIAGNOSE (temporär): Erzeugt der containerlose CompileApps-Pfad
+      # dieselbe Translations/*.g.xlf wie der container-basierte RunPipeline-Pfad?
+      - name: 'DIAGNOSE: Translations-Ordner auflisten'
+        if: success() || failure()
+        shell: pwsh
+        run: |
+          Write-Host "--- Translations-Ordner unter $env:GITHUB_WORKSPACE ---"
+          Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Directory -Filter 'Translations' -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "Ordner: $($_.FullName)"
+            Get-ChildItem -Path $_.FullName -File -Force | ForEach-Object { Write-Host "    $($_.Name)  ($($_.Length) Bytes)" }
+          }
+          Write-Host "--- Alle *.g.xlf im Workspace ---"
+          $found = @(Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Filter '*.g.xlf' -File -Force -ErrorAction SilentlyContinue)
+          if ($found.Count -eq 0) {
+            Write-Host "KEINE .g.xlf gefunden."
+          } else {
+            $found | ForEach-Object { Write-Host "$($_.FullName)  ($($_.Length) Bytes)" }
+          }
+
+      - name: 'DIAGNOSE: .g.xlf als Artefakt hochladen'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        env:
+          ACTIONS_RUNNER_DISABLE_NODE_MAGLEV: 1
+        if: success() || failure()
+        with:
+          name: 'DIAGNOSE-compileapps-gxlf'
+          path: '**/Translations/*.xlf'
+          if-no-files-found: ignore
